@@ -1,6 +1,3 @@
-Certainly! Here is a recommended AGENTS.md file for your repo, designed for Codex (and similar AI code assistants) to clearly define agent roles, instructions, and collaborative practices. This file also explicitly asks Codex to review and implement the tasks found in tasks.json, as well as to optimize AGENTS.md itself:
-
----
 
 # AGENTS.md
 
