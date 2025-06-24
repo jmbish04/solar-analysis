@@ -22,14 +22,20 @@ async function run() {
   const start = document.getElementById('start').value;
   const end = document.getElementById('end').value;
   if (!start || !end) {
+
     alert('Please select both a start and end date.');
+
     return;
   }
   const resp = await fetch(`/analysis/nem2vnem3?start=${start}&end=${end}`);
   const data = await resp.json();
   document.getElementById('summary').textContent = `NEM2: $${data.costNEM2.toFixed(2)}\nNEM3: $${data.costNEM3.toFixed(2)}\nDiff: $${data.diff.toFixed(2)}`;
   const labels = data.hours.map(h=>`${h.date} ${h.hour}`);
-  const diff = data.hours.map(h => h.diff);
+
+  const diff = data.hours.map(h => h.hourlyDiff);
+
+
+
   if(window.myChart) window.myChart.destroy();
   window.myChart = new Chart(document.getElementById('chart'), {
     type:'bar',
