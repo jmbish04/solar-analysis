@@ -23,7 +23,6 @@ export async function handleNemAnalysis(request: Request, env: Env): Promise<Res
     return new Response('missing start or end', { status: 400 });
   }
 
-
   const hours = await queryDB<HourRecord>(
     env.DB,
     `SELECT u.date, u.hour, u.usage, coalesce(p.ac_wh, 0) as pv
@@ -33,6 +32,7 @@ export async function handleNemAnalysis(request: Request, env: Env): Promise<Res
      ORDER BY u.date, u.hour`,
     [startStr, endStr]
   );
+
     let costNEM2 = 0;
   let costNEM3 = 0;
   const detailedHours = [];
@@ -40,10 +40,12 @@ export async function handleNemAnalysis(request: Request, env: Env): Promise<Res
     const rate = rateForHour(parseInt(h.hour));
     const net = h.usage - h.pv;
     let hourlyDiff = 0;
+
     if (net >= 0) {
       costNEM2 += net * rate;
       costNEM3 += net * rate;
     } else {
+
       const nem2Credit = net * rate; // negative credit
       const nem3Credit = net * rate * 0.75;
       costNEM2 += nem2Credit;
