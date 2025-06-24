@@ -21,6 +21,13 @@ CREATE TABLE IF NOT EXISTS pvwatts (
   dhi REAL
 );
 
+CREATE TABLE IF NOT EXISTS pvwatts_hourly (
+  date TEXT,
+  hour TEXT,
+  ac_wh REAL,
+  PRIMARY KEY(date, hour)
+);
+
 CREATE TABLE IF NOT EXISTS sunrise_sunset (
   date TEXT PRIMARY KEY,
   sunrise TEXT,
