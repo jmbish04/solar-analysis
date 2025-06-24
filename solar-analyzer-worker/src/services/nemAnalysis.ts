@@ -22,8 +22,8 @@ export async function handleNemAnalysis(request: Request, env: Env): Promise<Res
   if (!startStr || !endStr) {
     return new Response('missing start or end', { status: 400 });
   }
-  const start = new Date(startStr);
-  const end = new Date(endStr);
+
+
   const hours = await queryDB<HourRecord>(
     env.DB,
     `SELECT u.date, u.hour, u.usage, coalesce(p.ac_wh, 0) as pv
