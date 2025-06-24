@@ -1,32 +1,52 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Hello, World!</title>
-	</head>
-	<body>
-		<h1 id="heading"></h1>
-		<p>This page comes from a static asset stored at `public/index.html` as configured in `wrangler.jsonc`.</p>
-		<button id="button" type="button">Fetch a random UUID</button>
-		<output id="random" for="button"></output>
-		<script>
-			fetch('/message')
-				.then((resp) => resp.text())
-				.then((text) => {
-					const h1 = document.getElementById('heading');
-					h1.textContent = text;
-				});
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEM 2.0 Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <h1>NEM 2.0 Asset Valuation</h1>
+  <label>Start <input id="start" type="date"></label>
+  <label>End <input id="end" type="date"></label>
+  <button id="run">Run Analysis</button>
+  <button id="pdf">Download PDF</button>
+  <div>
+    <canvas id="chart" width="600" height="300"></canvas>
+  </div>
+  <pre id="summary"></pre>
+<script>
+async function run() {
+  const start = document.getElementById('start').value;
+  const end = document.getElementById('end').value;
+  const resp = await fetch(`/analysis/nem2vnem3?start=${start}&end=${end}`);
+  const data = await resp.json();
+  document.getElementById('summary').textContent = `NEM2: $${data.costNEM2.toFixed(2)}\nNEM3: $${data.costNEM3.toFixed(2)}\nDiff: $${data.diff.toFixed(2)}`;
+  const labels = data.hours.map(h=>`${h.date} ${h.hour}`);
+  const diff = data.hours.map(h => {
+    const rate = h.hour >= 16 && h.hour < 21 ? 0.35 : 0.25;
+    const net = h.usage - h.pv;
+    if (net >= 0) return 0;
+    return net * rate * 0.75 - net * rate;
+  });
+  if(window.myChart) window.myChart.destroy();
+  window.myChart = new Chart(document.getElementById('chart'), {
+    type:'bar',
+    data:{labels, datasets:[{label:'NEM3 - NEM2 ($)', data: diff}]}
+  });
+}
 
-			const button = document.getElementById("button");
-			button.addEventListener("click", () => {
-				fetch('/random')
-					.then((resp) => resp.text())
-					.then((text) => {
-						const random = document.getElementById('random');
-						random.textContent = text;
-					});
-			});
-		</script>
-	</body>
+async function downloadPdf() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text(document.getElementById('summary').textContent, 10, 10);
+  doc.save('report.pdf');
+}
+
+document.getElementById('run').addEventListener('click', run);
+document.getElementById('pdf').addEventListener('click', downloadPdf);
+</script>
+</body>
 </html>
