@@ -29,12 +29,7 @@ async function run() {
   const data = await resp.json();
   document.getElementById('summary').textContent = `NEM2: $${data.costNEM2.toFixed(2)}\nNEM3: $${data.costNEM3.toFixed(2)}\nDiff: $${data.diff.toFixed(2)}`;
   const labels = data.hours.map(h=>`${h.date} ${h.hour}`);
-  const diff = data.hours.map(h => {
-    const rate = h.hour >= 16 && h.hour < 21 ? 0.35 : 0.25;
-    const net = h.usage - h.pv;
-    if (net >= 0) return 0;
-    return net * rate * 0.75 - net * rate;
-  });
+  const diff = data.hours.map(h => h.diff);
   if(window.myChart) window.myChart.destroy();
   window.myChart = new Chart(document.getElementById('chart'), {
     type:'bar',
