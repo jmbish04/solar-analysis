@@ -33,21 +33,27 @@ export async function handleNemAnalysis(request: Request, env: Env): Promise<Res
      ORDER BY u.date, u.hour`,
     [startStr, endStr]
   );
-  let costNEM2 = 0;
+    let costNEM2 = 0;
   let costNEM3 = 0;
+  const detailedHours = [];
   for (const h of hours) {
     const rate = rateForHour(parseInt(h.hour));
     const net = h.usage - h.pv;
+    let hourlyDiff = 0;
     if (net >= 0) {
       costNEM2 += net * rate;
       costNEM3 += net * rate;
     } else {
-      costNEM2 += net * rate; // negative credit
-      costNEM3 += net * rate * 0.75;
+      const nem2Credit = net * rate; // negative credit
+      const nem3Credit = net * rate * 0.75;
+      costNEM2 += nem2Credit;
+      costNEM3 += nem3Credit;
+      hourlyDiff = nem3Credit - nem2Credit;
     }
+    detailedHours.push({ ...h, hourlyDiff });
   }
   const diff = costNEM3 - costNEM2;
-  return new Response(JSON.stringify({ costNEM2, costNEM3, diff, hours }), {
+  return new Response(JSON.stringify({ costNEM2, costNEM3, diff, hours: detailedHours }), {
     headers: { 'Content-Type': 'application/json' }
   });
 }
