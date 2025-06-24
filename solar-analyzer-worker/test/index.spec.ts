@@ -28,6 +28,12 @@ CREATE TABLE IF NOT EXISTS pvwatts (
   dni REAL,
   dhi REAL
 );
+CREATE TABLE IF NOT EXISTS pvwatts_hourly (
+  date TEXT,
+  hour TEXT,
+  ac_wh REAL,
+  PRIMARY KEY(date, hour)
+);
 CREATE TABLE IF NOT EXISTS sunrise_sunset (
   date TEXT PRIMARY KEY,
   sunrise TEXT,
@@ -49,5 +55,34 @@ CREATE TABLE IF NOT EXISTS sunrise_sunset (
     expect(response.status).toBe(200);
     const data = await env.DB.prepare('SELECT count(*) as c FROM pge_usage').first<any>();
     expect(data.c).toBe(1);
+  });
+
+  it('calculates nem diff', async () => {
+    await env.DB.prepare('INSERT INTO pge_usage (date, hour, usage, units) VALUES ("2023-01-01", "00", 1, "kWh")').run();
+    await env.DB.prepare('INSERT INTO pvwatts_hourly (date, hour, ac_wh) VALUES ("2023-01-01", "00", 0.5)').run();
+    const request = new Request('http://example.com/analysis/nem2vnem3?start=2023-01-01&end=2023-01-01');
+    const ctx = createExecutionContext();
+    const response = await worker.fetch(request, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.costNEM2).toBeCloseTo(0.5 * 0.25);
+    expect(data.costNEM3).toBeCloseTo(0.5 * 0.25);
+    expect(data.diff).toBeCloseTo(0);
+  });
+
+  it('calculates diff for net generation', async () => {
+    await env.DB.prepare('INSERT INTO pge_usage (date, hour, usage, units) VALUES ("2023-01-02", "00", 0.5, "kWh")').run();
+    await env.DB.prepare('INSERT INTO pvwatts_hourly (date, hour, ac_wh) VALUES ("2023-01-02", "00", 1.0)').run();
+    const request = new Request('http://example.com/analysis/nem2vnem3?start=2023-01-02&end=2023-01-02');
+    const ctx = createExecutionContext();
+    const response = await worker.fetch(request, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    const rate = 0.25;
+    expect(data.costNEM2).toBeCloseTo(-0.5 * rate);
+    expect(data.costNEM3).toBeCloseTo(-0.5 * rate * 0.75);
+    expect(data.diff).toBeCloseTo(0.5 * rate * 0.25);
   });
 });

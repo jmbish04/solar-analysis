@@ -42,8 +42,21 @@ export async function handleBackfillPvwatts(request: Request, env: Env): Promise
     const year = date.slice(0,4);
     const yearArray = yearData[year];
     const idx = Math.floor((new Date(date).valueOf() - new Date(`${year}-01-01`).valueOf()) / 86400000);
-    const dayAc = yearArray.slice(idx*24, idx*24+24).reduce((a,b)=>a+(b||0),0);
+    const hours = yearArray.slice(idx*24, idx*24+24);
+    const dayAc = hours.reduce((a,b)=>a+(b||0),0);
     await execute(env.DB, 'INSERT INTO pvwatts (date, ac_wh) VALUES (?, ?)', [date, dayAc]);
+    const statements: D1PreparedStatement[] = [];
+    for (let h = 0; h < 24; h++) {
+      const hour = h.toString().padStart(2, '0');
+      statements.push(
+        env.DB.prepare('INSERT INTO pvwatts_hourly (date, hour, ac_wh) VALUES (?1, ?2, ?3)').bind(
+          date,
+          hour,
+          hours[h] || 0
+        )
+      );
+    }
+    await env.DB.batch(statements);
     inserted++;
   }
 
