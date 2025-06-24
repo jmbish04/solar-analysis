@@ -34,18 +34,18 @@ export async function handleNemAnalysis(request: Request, env: Env): Promise<Res
   const start = new Date(startStr);
   const end = new Date(endStr);
   const dates = dateRange(start, end);
-  const hours: HourRecord[] = [];
-  for (const date of dates) {
-    const usageRows = await queryDB<{hour:string, usage:number}>(env.DB,
-      'SELECT hour, usage FROM pge_usage WHERE date=?', [date]);
-    const pvRows = await queryDB<{hour:string, ac_wh:number}>(env.DB,
-      'SELECT hour, ac_wh FROM pvwatts_hourly WHERE date=?', [date]);
-    const pvMap: Record<string, number> = {};
-    for (const r of pvRows) pvMap[r.hour] = r.ac_wh;
-    for (const u of usageRows) {
-      hours.push({ date, hour: u.hour, usage: u.usage, pv: pvMap[u.hour] || 0 });
-    }
-  }
+const sql = `
+  SELECT
+    u.date,
+    u.hour,
+    u.usage,
+    COALESCE(p.ac_wh, 0) as pv
+  FROM pge_usage u
+  LEFT JOIN pvwatts_hourly p ON u.date = p.date AND u.hour = p.hour
+  WHERE u.date BETWEEN ? AND ?
+  ORDER BY u.date, u.hour
+`;
+const hours = await queryDB<HourRecord>(env.DB, sql, [startStr, endStr]);
   let costNEM2 = 0;
   let costNEM3 = 0;
   for (const h of hours) {
